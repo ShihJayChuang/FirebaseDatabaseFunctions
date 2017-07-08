@@ -1,6 +1,7 @@
-Getting Started with Cloud Functions for Firebase - Firecasts 教學
 
-Trigger a function with an HTTP request
+![Storage](https://github.com/ShihJayChuang/FirebaseDatabaseFunctions/blob/master/Storage.PNG)
+
+![Database](https://github.com/ShihJayChuang/FirebaseDatabaseFunctions/blob/master/Database.PNG)
 
 1.Firebase建立一個專案，Storage和Database規則改為public
  
@@ -391,7 +392,7 @@ test\functions\package.json
 }
 
 ```
-6. cmd  firebase deploy
+6.cmd  firebase deploy
 
 7.到firebase console上傳相片，或安裝 [Google Cloud SDK for use on command line](https://goo.gl/oR9Vo9) 上傳相片
 
