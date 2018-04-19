@@ -9,9 +9,9 @@ const functions = require('firebase-functions');
 
 const mkdirp = require('mkdirp-promise');
 // Include a Service Account Key to use a Signed URL
-const gcs = require('@google-cloud/storage')({ keyFilename: 'functions-81d33-firebase-adminsdk-d99ph-c8d7a5ce4b.json' });
+const gcs = require('@google-cloud/storage')({ keyFilename: 'functions-81d33-firebase-adminsdk-d99ph-701646f528.json' });
 const admin = require('firebase-admin');
-admin.initializeApp(functions.config().firebase);
+admin.initializeApp();
 const spawn = require('child-process-promise').spawn;
 const path = require('path');
 const os = require('os');
@@ -37,9 +37,9 @@ const STORAGE_DECO_REF = 'images/Deco';
  * After the thumbnail has been generated and uploaded to Cloud Storage,
  * we write the public URL to the Firebase Realtime Database.
  */
-exports.generateThumbnail = functions.storage.object().onChange(event => {
+exports.generateThumbnail = functions.storage.object().onFinalize((object, context) => {
   // File and directory paths.
-  const filePath = event.data.name;
+  const filePath = object.name;
   const fileDir = path.dirname(filePath);
   const fileName = path.basename(filePath);
 
@@ -50,41 +50,33 @@ exports.generateThumbnail = functions.storage.object().onChange(event => {
   const tempLocalThumbFile = path.join(os.tmpdir(), thumbFilePath);
 
   // Exit if this is triggered on a file that is not an image.
-  if (!event.data.contentType.startsWith('image/')) {
+  if (!object.contentType.startsWith('image/')) {
     console.log('This is not an image.');
-    return;
+    return true;
   }
 
   // Exit if the image is already a thumbnail.
   if (fileName.startsWith(THUMB_PREFIX)) {
     console.log('Already a Thumbnail.');
-    return;
+    return true;
   }
 
 
 
   // Cloud Storage files.
-  const bucket = gcs.bucket(event.data.bucket);
+  const bucket = gcs.bucket(object.bucket);
   const file = bucket.file(filePath);
   const thumbFile = bucket.file(thumbFilePath);
 
+  
   // Exit if this is a move or deletion event.
   // if (event.data.resourceState === 'not_exists') {
   //   console.log('This is a deletion event.');
   //   return;
   // }
-  if (event.data.resourceState === 'not_exists') {
-    console.log('This is a deletion event.');
-    if (fileDir === STORAGE_COSMO_REF) {
-      return admin.database().ref(DATABASE_COSMO_REF).child(aFileName).set(null);
-    }
-    if (fileDir === STORAGE_GLATIMA_REF) {
-      return admin.database().ref(DATABASE_GLATIMA_REF).child(aFileName).set(null);
-    }
-    if (fileDir === STORAGE_DECO_REF) {
-      return admin.database().ref(DATABASE_DECO_REF).child(aFileName).set(null);
-    }
-  }
+  
+
+
 
 
   // Create the temp directory where the storage file will be downloaded.
@@ -134,3 +126,28 @@ exports.generateThumbnail = functions.storage.object().onChange(event => {
 
   });
 });
+
+exports.fileDeleted = functions.storage.object().onDelete((object, context) => {
+  const filePath = object.name;
+  const fileDir = path.dirname(filePath);
+  const fileName = path.basename(filePath);
+  const aFileName = fileName.replace(/(\.)?([^\/.]*)$/, "");
+  const thumbFilePath = path.normalize(path.join(fileDir, `${THUMB_PREFIX}${fileName}`));
+  const tempLocalFile = path.join(os.tmpdir(), filePath);
+  const tempLocalDir = path.dirname(tempLocalFile);
+  const tempLocalThumbFile = path.join(os.tmpdir(), thumbFilePath);
+  
+  console.log('This is a deletion event.');
+  if (fileDir === STORAGE_COSMO_REF) {
+    return admin.database().ref(DATABASE_COSMO_REF).child(aFileName).set(null);
+  }
+  if (fileDir === STORAGE_GLATIMA_REF) {
+    return admin.database().ref(DATABASE_GLATIMA_REF).child(aFileName).set(null);
+  }
+  if (fileDir === STORAGE_DECO_REF) {
+    return admin.database().ref(DATABASE_DECO_REF).child(aFileName).set(null);
+  }
+})
+exports.metadataUpdated = functions.storage.object().onMetadataUpdate((object, context) => {
+  
+})
